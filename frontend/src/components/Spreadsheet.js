@@ -1,49 +1,75 @@
 import React, { useState } from 'react';
 import { evaluateFormula } from '../utils/formulaEvaluator';
+import '../App.css';
 
 const Spreadsheet = () => {
-    // Store cell data: { '0-0': '5', '1-0': '=SUM(A1:A5)' }
     const [cellData, setCellData] = useState({});
+    const [rows, setRows] = useState(5);
+    const [cols, setCols] = useState(5);
+    const [selectedCell, setSelectedCell] = useState(null);
+    const [boldCells, setBoldCells] = useState(new Set());
+    const [italicCells, setItalicCells] = useState(new Set());
+    const [cellColor, setCellColor] = useState({});
 
-    // Update cell and auto-evaluate formulas
     const updateCell = (row, col, value) => {
         const key = `${row}-${col}`;
-
         setCellData((prevData) => {
             const newData = { ...prevData, [key]: value };
-
-            // Evaluate all formulas after update
             Object.keys(newData).forEach((cellKey) => {
                 if (newData[cellKey].startsWith('=')) {
                     newData[cellKey] = evaluateFormula(newData[cellKey], newData);
                 }
             });
-
             return newData;
         });
     };
 
-    // Generate Column Labels (A, B, C…)
     const getColumnLabel = (index) => String.fromCharCode(65 + index);
+
+    const addRow = () => setRows((prev) => prev + 1);
+    const addColumn = () => setCols((prev) => prev + 1);
+    const deleteRow = () => setRows((prev) => (prev > 1 ? prev - 1 : 1));
+    const deleteColumn = () => setCols((prev) => (prev > 1 ? prev - 1 : 1));
+
+    const toggleBold = () => {
+        if (selectedCell) {
+            setBoldCells((prev) => {
+                const newSet = new Set(prev);
+                newSet.has(selectedCell) ? newSet.delete(selectedCell) : newSet.add(selectedCell);
+                return newSet;
+            });
+        }
+    };
+
+    const toggleItalic = () => {
+        if (selectedCell) {
+            setItalicCells((prev) => {
+                const newSet = new Set(prev);
+                newSet.has(selectedCell) ? newSet.delete(selectedCell) : newSet.add(selectedCell);
+                return newSet;
+            });
+        }
+    };
 
     return (
         <div>
             <h1>📊 Google Sheets Clone</h1>
-
-            {/* Spreadsheet */}
+            <div className="toolbar">
+                <button onClick={addRow}>➕ Add Row</button>
+                <button onClick={addColumn}>➕ Add Column</button>
+                <button onClick={deleteRow}>➖ Delete Row</button>
+                <button onClick={deleteColumn}>➖ Delete Column</button>
+                <button onClick={toggleBold}><b>Bold</b></button>
+                <button onClick={toggleItalic}><i>Italic</i></button>
+            </div>
             <div style={gridStyle}>
-                {/* Header Row */}
                 <div></div>
                 {Array.from({ length: 5 }).map((_, col) => (
                     <div key={col} style={headerStyle}>{getColumnLabel(col)}</div>
                 ))}
-
-                {/* Cells */}
                 {Array.from({ length: 5 }).map((_, row) => (
                     <React.Fragment key={row}>
-                        {/* Row Numbers */}
                         <div style={headerStyle}>{row + 1}</div>
-
                         {Array.from({ length: 5 }).map((_, col) => {
                             const key = `${row}-${col}`;
                             return (
@@ -51,7 +77,12 @@ const Spreadsheet = () => {
                                     key={key}
                                     value={cellData[key] || ''}
                                     onChange={(e) => updateCell(row, col, e.target.value)}
-                                    style={cellStyle}
+                                    style={{
+                                        ...cellStyle,
+                                        fontWeight: boldCells.has(key) ? 'bold' : 'normal',
+                                        fontStyle: italicCells.has(key) ? 'italic' : 'normal',
+                                        backgroundColor: cellColor[key] || 'white',
+                                    }}
                                     placeholder={getColumnLabel(col) + (row + 1)}
                                 />
                             );
@@ -59,8 +90,6 @@ const Spreadsheet = () => {
                     </React.Fragment>
                 ))}
             </div>
-
-            {/* Formula Guide */}
             <div style={{ marginTop: '20px' }}>
                 <h2>🧮 Supported Formulas:</h2>
                 <ul>
